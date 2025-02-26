@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>语音转文字</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --hover-color: #3046c1;
+            --secondary-color: #2ecc71;
+            --secondary-hover: #27ae60;
+            --bg-color: #f8f9fa;
+            --border-color: #e9ecef;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+
+        .upload-area {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        #uploadForm {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            padding: 1rem 2rem;
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-input-label:hover {
+            background-color: var(--secondary-hover);
+            transform: translateY(-1px);
+        }
+
+        .submit-button {
+            padding: 1rem 2rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .submit-button:hover {
+            background-color: var(--hover-color);
+            transform: translateY(-1px);
+        }
+
+        .submit-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .file-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .file-item {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+
+        .progress {
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+
+        .text-content {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            margin: 1rem 0;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-button {
+            padding: 0.5rem 1rem;
+            background-color: white;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .action-button:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .upload-area {
+                padding: 1rem;
+            }
+        }
+
+        .selected-files {
+            margin-top: 1rem;
+            width: 100%;
+            text-align: center;
+        }
+
+        .selected-file-name {
+            background-color: #e9ecef;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin: 0.25rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .remove-file {
+            padding: 4px 8px;
+            border: 1px solid #dc3545;
+            background: none;
+            color: #dc3545;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 0.8rem;
+        }
+
+        .remove-file:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        .file-icon svg {
+            color: var(--primary-color);
+        }
+
+        /* 新增和优化的样式 */
+        .drag-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .drag-area.active {
+            border-color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+
+        .drag-area-text {
+            color: #666;
+            margin: 1rem 0;
+        }
+
+        .file-type-info {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
+        .selected-file-name {
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin: 0.5rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .selected-file-name:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-badge.pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.processing {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        .status-badge.completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .upload-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .upload-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1rem;
+        }
+
+        .upload-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .file-area {
+            background: white;
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .file-area.has-files {
+            border-style: solid;
+            justify-content: flex-start;
+        }
+
+        .file-list-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            color: #666;
+        }
+
+        .selected-files {
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .selected-file-name {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            margin: 0.5rem 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .selected-file-name:hover {
+            background: #e9ecef;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .file-icon {
+            color: var(--primary-color);
+        }
+
+        .file-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .file-name {
+            font-weight: 500;
+        }
+
+        .file-size {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .remove-file {
+            padding: 0.5rem;
+            border: none;
+            background: none;
+            color: #dc3545;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .remove-file:hover {
+            background: #fee2e2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>语音转文字服务</h1>
+        <div class="upload-area">
+            <form id="uploadForm">
+                <div class="upload-container">
+                    <div class="upload-header">
+                        <div class="upload-buttons">
+                            <label class="file-input-label">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                选择音频文件
+                                <input type="file" accept=".wav,.mp3,.m4a,.flac,.aac" id="audioFile" multiple required>
+                            </label>
+                            <button type="submit" class="submit-button" id="submitButton" disabled>
+                                开始转换
+                            </button>
+                        </div>
+                    </div>
+                    <div class="file-area" id="fileArea">
+                        <div class="file-list-header">
+                            <span>已选择的文件</span>
+                            <span class="file-count" id="fileCount">0 个文件</span>
+                        </div>
+                        <div class="selected-files" id="selectedFiles">
+                            <div class="empty-state">
+                                <p>暂无选择的文件</p>
+                                <p class="file-type-info">支持的格式：MP3, WAV, M4A 等音频文件</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="file-list" id="fileList"></div>
+    </div>
+
+    <script>
+        // 修复拖放功能
+        const fileArea = document.getElementById('fileArea');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            fileArea.classList.add('active');
+        }
+
+        function unhighlight(e) {
+            fileArea.classList.remove('active');
+        }
+
+        fileArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            const fileInput = document.getElementById('audioFile');
+            const dt = new DataTransfer();
+            Array.from(files).forEach(file => dt.items.add(file));
+            fileInput.files = dt.files;
+            fileInput.dispatchEvent(new Event('change'));
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 修复文件选择显示
+        document.getElementById('audioFile').addEventListener('change', function(e) {
+            const selectedFiles = document.getElementById('selectedFiles');
+            const fileArea = document.getElementById('fileArea');
+            const fileCount = document.getElementById('fileCount');
+            selectedFiles.innerHTML = '';
+            
+            if (this.files.length === 0) {
+                fileArea.classList.remove('has-files');
+                selectedFiles.innerHTML = `
+                    <div class="empty-state">
+                        <p>暂无选择的文件</p>
+                        <p class="file-type-info">支持的格式：MP3, WAV, M4A 等音频文件</p>
+                    </div>
+                `;
+                fileCount.textContent = '0 个文件';
+            } else {
+                fileArea.classList.add('has-files');
+                Array.from(this.files).forEach(file => {
+                    const fileDiv = document.createElement('div');
+                    fileDiv.className = 'selected-file-name';
+                    fileDiv.innerHTML = `
+                        <div class="file-info">
+                            <span class="file-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                                    <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+                                </svg>
+                            </span>
+                            <div class="file-details">
+                                <span class="file-name">${file.name}</span>
+                                <span class="file-size">${formatFileSize(file.size)}</span>
+                            </div>
+                        </div>
+                        <button type="button" class="remove-file" onclick="removeFile(this)" title="移除文件">移除</button>
+                    `;
+                    selectedFiles.appendChild(fileDiv);
+                });
+                fileCount.textContent = `${this.files.length} 个文件`;
+            }
+            
+            updateSubmitButton();
+        });
+
+        // 更新提交按钮状态
+        function updateSubmitButton() {
+            const submitButton = document.getElementById('submitButton');
+            const files = document.getElementById('audioFile').files;
+            submitButton.disabled = files.length === 0;
+            submitButton.style.opacity = files.length === 0 ? '0.5' : '1';
+        }
+
+        // 更新文件处理状态显示
+        function updateFileItem(fileItem, text, status = 'completed') {
+            const textContent = fileItem.querySelector('.text-content');
+            const statusBadge = fileItem.querySelector('.status-badge');
+            const completionTime = fileItem.querySelector('.completion-time');
+            textContent.textContent = text;
+            
+            if (status === 'error') {
+                statusBadge.className = 'status-badge error';
+                statusBadge.textContent = '错误';
+                completionTime.textContent = '';
+            } else {
+                statusBadge.className = 'status-badge completed';
+                statusBadge.textContent = '已完成';
+                
+                // 获取当前时间并格式化
+                const now = new Date();
+                const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+                completionTime.textContent = `转写完成时间：${timeStr}`;
+            }
+        }
+
+        // 创建文件项
+        function createFileItem(file) {
+            const div = document.createElement('div');
+            div.className = 'file-item';
+            div.innerHTML = `
+                <div class="file-name">
+                    ${file.name}
+                    <span class="status-badge processing">处理中</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" style="width: 0%"></div>
+                </div>
+                <div class="text-content">处理中...</div>
+                <div class="completion-time" style="color: #666; font-size: 0.9rem; margin: 0.5rem 0;"></div>
+                <div class="actions">
+                    <button class="action-button" onclick="copyText(this)">复制文本</button>
+                    <button class="action-button" onclick="downloadText(this)">下载文本</button>
+                </div>
+            `;
+            return div;
+        }
+
+        // 移除单个文件的函数
+        function removeFile(button) {
+            const fileInput = document.getElementById('audioFile');
+            const fileDiv = button.closest('.selected-file-name');
+            const fileName = fileDiv.querySelector('.file-name').textContent;
+            
+            // 创建新的 FileList
+            const dt = new DataTransfer();
+            Array.from(fileInput.files)
+                .filter(file => file.name !== fileName)
+                .forEach(file => dt.items.add(file));
+                
+            fileInput.files = dt.files;
+            
+            // 从页面中移除文件项
+            fileDiv.remove();
+            
+            // 更新文件计数
+            const fileCount = document.getElementById('fileCount');
+            const remainingFiles = fileInput.files.length;
+            fileCount.textContent = `${remainingFiles} 个文件`;
+            
+            // 如果没有文件了，显示空状态
+            if (remainingFiles === 0) {
+                const selectedFiles = document.getElementById('selectedFiles');
+                const fileArea = document.getElementById('fileArea');
+                fileArea.classList.remove('has-files');
+                selectedFiles.innerHTML = `
+                    <div class="empty-state">
+                        <p>暂无选择的文件</p>
+                        <p class="file-type-info">支持的格式：MP3, WAV, M4A 等音频文件</p>
+                    </div>
+                `;
+            }
+            
+            // 更新提交按钮状态
+            updateSubmitButton();
+        }
+
+        document.getElementById('uploadForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const files = document.getElementById('audioFile').files;
+            
+            if (files.length === 0) {
+                alert('请选择至少一个音频文件');
+                return;
+            }
+            
+            for (let file of files) {
+                // 创建并显示文件项
+                const fileItem = createFileItem(file);
+                document.getElementById('fileList').insertBefore(fileItem, document.getElementById('fileList').firstChild);
+                
+                // 初始化进度条
+                const progressBar = fileItem.querySelector('.progress-bar');
+                progressBar.style.width = '0%';
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                    // 更新进度条状态
+                    progressBar.style.width = '50%';
+                    
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // 完成进度条
+                    progressBar.style.width = '100%';
+                    
+                    if (data.error) {
+                        updateFileItem(fileItem, '错误：' + data.error);
+                    } else {
+                        updateFileItem(fileItem, data.text);
+                    }
+                } catch (error) {
+                    progressBar.style.backgroundColor = '#dc3545'; // 错误时进度条变红
+                    updateFileItem(fileItem, '发生错误：' + error.message);
+                }
+            }
+            
+            // 清空文件选择，允许重复上传相同文件
+            document.getElementById('audioFile').value = '';
+        };
+
+        function copyText(button) {
+            const text = button.closest('.file-item').querySelector('.text-content').textContent;
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    // 显示临时提示
+                    const originalText = button.textContent;
+                    button.textContent = '已复制！';
+                    button.style.backgroundColor = '#4CAF50';
+                    button.style.color = 'white';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.backgroundColor = '';
+                        button.style.color = '';
+                    }, 2000);
+                })
+                .catch(err => alert('复制失败：' + err));
+        }
+
+        function downloadText(button) {
+            const text = button.closest('.file-item').querySelector('.text-content').textContent;
+            const fileName = button.closest('.file-item').querySelector('.file-name').textContent.trim();
+            
+            // 获取当前时间并格式化
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            // 获取原始文件名（不含扩展名），并清理空格
+            const originalName = fileName.split('.')[0].trim().replace(/\s+/g, '');
+            
+            // 组合新的文件名
+            const newFileName = `${dateStr}-${originalName}_转写结果.txt`;
+            
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = newFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // 显示临时提示
+            const originalText = button.textContent;
+            button.textContent = '已下载！';
+            button.style.backgroundColor = '#4CAF50';
+            button.style.color = 'white';
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.backgroundColor = '';
+                button.style.color = '';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
